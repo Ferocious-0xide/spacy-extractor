@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extraction Results | spaCy PDF Extractor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="container">
+        <h1>Extraction Results</h1>
+        
+        {% if not data %}
+        <div class="message error">
+            Document not found or processing failed.
+        </div>
+        <a href="/">Back to Home</a>
+        {% else %}
+        
+        <div class="document-info">
+            <h2>Document: {{ data.document.filename }}</h2>
+            <p>
+                <strong>Upload Date:</strong> {{ data.document.upload_date.strftime('%Y-%m-%d %H:%M') }} |
+                <strong>Status:</strong> 
+                <span class="status status-{{ data.document.status }}">
+                    {{ data.document.status }}
+                </span>
+            </p>
+        </div>
+        
+        <h3>Extracted Entities</h3>
+        
+        <div class="entity-filters">
+            <label for="entity-type-filter">Filter by type:</label>
+            <select id="entity-type-filter">
+                <option value="all">All Types</option>
+                {% for type in entity_types %}
+                <option value="{{ type }}">{{ type }}</option>
+                {% endfor %}
+            </select>
+            
+            <label for="entity-confidence">Min. Confidence:</label>
+            <input type="range" id="entity-confidence" min="0" max="100" value="0" step="5">
+            <span id="confidence-value">0%</span>
+        </div>
+        
+        <table id="entities-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Text</th>
+                    <th>Confidence</th>
+                    <th>Page</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entity in data.entities %}
+                <tr data-type="{{ entity.entity_type }}" data-confidence="{{ entity.confidence * 100 }}">
+                    <td>{{ entity.entity_type }}</td>
+                    <td>{{ entity.entity_text }}</td>
+                    <td>{{ "%.0f"|format(entity.confidence * 100) }}%</td>
+                    <td>{{ entity.page_num }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="entity-stats">
+            <h3>Entity Statistics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Entity Type</th>
+                        <th>Count</th>
+                        <th>Avg. Confidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type_stats in entity_stats %}
+                    <tr>
+                        <td>{{ type_stats.type }}</td>
+                        <td>{{ type_stats.count }}</td>
+                        <td>{{ "%.0f"|format(type_stats.avg_confidence * 100) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <a href="/">Back to Home</a>
+        {% endif %}
+        
+        <div class="footer">
+            <p>spaCy PDF Extractor - A lightweight POC for extracting structured data from PDFs</p>
+        </div>
+    </div>
+    
+    <script>
+        // Filter entities by type and confidence
+        const typeFilter = document.getElementById('entity-type-filter');
+        const confidenceSlider = document.getElementById('entity-confidence');
+        const confidenceValue = document.getElementById('confidence-value');
+        const table = document.getElementById('entities-table');
+        
+        if (typeFilter && confidenceSlider) {
+            function filterEntities() {
+                const selectedType = typeFilter.value;
+                const minConfidence = parseInt(confidenceSlider.value);
+                confidenceValue.textContent = minConfidence + '%';
+                
+                const rows = table.querySelectorAll('tbody tr');
+                let visibleRows = 0;
+                
+                rows.forEach(row => {
+                    const type = row.getAttribute('data-type');
+                    const confidence = parseFloat(row.getAttribute('data-confidence'));
+                    
+                    const typeMatch = selectedType === 'all' || type === selectedType;
+                    const confidenceMatch = confidence >= minConfidence;
+                    
+                    if (typeMatch && confidenceMatch) {
+                        row.style.display = '';
+                        visibleRows++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                if (visibleRows === 0) {
+                    if (!document.getElementById('no-results')) {
+                        const noResults = document.createElement('tr');
+                        noResults.id = 'no-results';
+                        const td = document.createElement('td');
+                        td.colSpan = 4;
+                        td.textContent = 'No entities match the current filters';
+                        td.style.textAlign = 'center';
+                        noResults.appendChild(td);
+                        table.querySelector('tbody').appendChild(noResults);
+                    }
+                } else {
+                    const noResults = document.getElementById('no-results');
+                    if (noResults) {
+                        noResults.remove();
+                    }
+                }
+            }
+            
+            typeFilter.addEventListener('change', filterEntities);
+            confidenceSlider.addEventListener('input', filterEntities);
+        }
+    </script>
+</body>
+</html>

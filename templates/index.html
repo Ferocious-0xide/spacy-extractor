@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>spaCy PDF Extractor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="container">
+        <h1>spaCy PDF Extractor</h1>
+        
+        {% if error %}
+        <div class="message error">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if success %}
+        <div class="message success">
+            {{ success }}
+        </div>
+        {% endif %}
+        
+        <form action="/" method="post" enctype="multipart/form-data">
+            <div class="upload-container" id="upload-container">
+                <p>Drag & Drop your PDF here, or click to select</p>
+                <input type="file" name="pdf_file" id="pdf-file" accept=".pdf">
+            </div>
+            <button type="submit">Process PDF</button>
+        </form>
+        
+        <div id="progress-container" class="progress-container hidden">
+            <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+        </div>
+        
+        {% if documents %}
+        <h2>Processed Documents</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Filename</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td>{{ doc.id }}</td>
+                    <td>{{ doc.filename }}</td>
+                    <td>{{ doc.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <span class="status status-{{ doc.status }}">
+                            {{ doc.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if doc.status == 'complete' %}
+                        <a href="/results/{{ doc.id }}">View Results</a>
+                        {% elif doc.status == 'processing' %}
+                        <span>Processing...</span>
+                        {% else %}
+                        <span>Error</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        
+        <div class="footer">
+            <p>spaCy PDF Extractor - A lightweight POC for extracting structured data from PDFs</p>
+        </div>
+    </div>
+    
+    <script>
+        // Handle file upload via drag and drop
+        const uploadContainer = document.getElementById('upload-container');
+        const fileInput = document.getElementById('pdf-file');
+        
+        uploadContainer.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadContainer.innerHTML = `<p>Selected: ${fileInput.files[0].name}</p>`;
+            }
+        });
+        
+        uploadContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadContainer.style.backgroundColor = '#111';
+        });
+        
+        uploadContainer.addEventListener('dragleave', () => {
+            uploadContainer.style.backgroundColor = '';
+        });
+        
+        uploadContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadContainer.style.backgroundColor = '';
+            
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                uploadContainer.innerHTML = `<p>Selected: ${fileInput.files[0].name}</p>`;
+            }
+        });
+        
+        // Handle form submission
+        const form = document.querySelector('form');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        
+        form.addEventListener('submit', (e) => {
+            if (fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please select a PDF file first.');
+                return;
+            }
+            
+            progressContainer.classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>
